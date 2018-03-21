@@ -27,7 +27,6 @@ import java.io.*;
 import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.util.Date;
-import java.util.Scanner;
 import java.util.Random;
 
 public class App {
@@ -43,7 +42,9 @@ public class App {
         CloudBlobClient blobClient = null;
         CloudBlobContainer container=null;
         Random rand = new Random();
-        //rand.nextInt();
+
+        final int deltaBackOff = 10;
+        final int maxAttempts = 10;
 
         try {
             // Parse the connection string and create a blob client to interact with Blob storage
@@ -53,7 +54,7 @@ public class App {
 
             // Create the container if it does not exist with public access.
             System.out.println("Creating container: " + container.getName());
-            container.createIfNotExists(BlobContainerPublicAccessType.CONTAINER, new BlobRequestOptions(), new OperationContext());
+            container.createIfNotExists();
 
             //Creating a sample file
             sourceFile = File.createTempFile("sampleFile", ".txt");
@@ -70,10 +71,9 @@ public class App {
             blob.uploadFromFile(sourceFile.getAbsolutePath());
 
             BlobRequestOptions myReqOptions = new BlobRequestOptions();
-            myReqOptions.setRetryPolicyFactory(new RetryLinearRetry(20,20));
+            myReqOptions.setRetryPolicyFactory(new RetryLinearRetry(deltaBackOff,maxAttempts));
+            myReqOptions.setLocationMode(LocationMode.SECONDARY_ONLY);
             blobClient.setDefaultRequestOptions(myReqOptions);
-
-            blobClient.getDefaultRequestOptions().setLocationMode(LocationMode.SECONDARY_ONLY);
 
             int counter = 0;
             while(counter < 60)
@@ -148,10 +148,16 @@ public class App {
             System.out.println("Press the 'Enter' key while in the console to delete the sample files, example container, and exit the application.");
 
             //Pausing for input
-            Scanner sc = new Scanner(System.in);
-            sc.nextLine();
+            try {
+                System.in.read();
+            }
+            catch (IOException ex)
+            {
+                System.out.println(ex.getMessage());
+            }
 
             System.out.println("Deleting the container");
+            
             try {
                 if(container != null)
                     container.deleteIfExists();
@@ -160,16 +166,13 @@ public class App {
                 System.out.println(String.format("Service error. Http code: %d and error code: %s", ex.getHttpStatusCode(), ex.getErrorCode()));
             }
 
-            System.out.println("Deleting the source, and downloaded files");
+            System.out.println("Deleting the source and downloaded files");
 
             if(downloadedFile != null)
                 downloadedFile.deleteOnExit();
 
             if(sourceFile != null)
                 sourceFile.deleteOnExit();
-
-            //Closing scanner
-            sc.close();
         }
     }
 }
