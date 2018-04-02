@@ -42,7 +42,7 @@ setx storageConnectionString "<YourStorageConnectionString>"
 
 3. Run Fiddler or create an invalid static route. 
 
-4. Run the Python application. It displays information on your console window showing the count of requests made against the storage service to download the file, and tells whether you are accessing the primary or secondary endpoint. You can also see the information in the Fiddler trace. 
+4. Run the java application. It displays information on your console window showing the count of requests made against the storage service to download the file, and tells whether you are accessing the primary or secondary endpoint. You can also see the information in the Fiddler trace. 
 
 5. The application pauses at 200 count intervals.
 
