@@ -5,7 +5,7 @@ author: roygara
 ---
 
 # Using the Circuit Breaker pattern in your HA apps with RA-GRS Storage
-This sample shows how to use the Circuit Breaker pattern with an RA-GRS storage account to switch your high-availability application to secondary storage when there is a problem with primary storage, and then switch back when primary storage becomes available again. For more information, please see [Designing HA Apps with RA-GRS storage](https://azure.microsoft.com/documentation/articles/storage-designing-ha-apps-with-ra-grs).
+This sample shows how to use the Circuit Breaker pattern with an RA-GRS storage account to switch your high-availability application to secondary storage when there is a problem with primary storage, and then switch back when primary storage becomes available again. For more information, please see [Designing HA Apps with RA-GRS storage](https://docs.microsoft.com/azure/storage/common/storage-designing-ha-apps-with-ragrs).
 
 If you don't have a Microsoft Azure subscription, you can get a FREE trial account <a href="http://go.microsoft.com/fwlink/?LinkId=330212">here</a>.
 
@@ -49,7 +49,7 @@ setx storageConnectionString "<YourStorageConnectionString>"
 6. Go to Fiddler and select Rules > Customize Rules. Look for the OnBeforeResponse function and insert this code. (An example of the OnBeforeResponse method is included in the project in the Fiddler_script.txt file.)
 ```
 	if ((oSession.hostname == "YOURSTORAGEACCOUNTNAME.blob.core.windows.net") 
-	&& (oSession.PathAndQuery.Contains("HelloWorld"))) {
+	&& (oSession.PathAndQuery.Contains("sampleFile"))) {
 	   oSession.responseCode = 503;  
         }
 ```
@@ -64,5 +64,5 @@ If you run the application repeatedly, be sure the script change is commented ou
 
 ## More information
 - [About Azure storage accounts](https://docs.microsoft.com/azure/storage/storage-create-storage-account)
-- [Designing HA Apps with RA-GRS storage](https://docs.microsoft.com/azure/storage/storage-designing-ha-apps-with-ra-grs/)
+- [Designing HA Apps with RA-GRS storage](https://docs.microsoft.com/azure/storage/common/storage-designing-ha-apps-with-ragrs)
 - [Azure Storage Replication](https://docs.microsoft.com/azure/storage/storage-redundancy)
