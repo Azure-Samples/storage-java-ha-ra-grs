@@ -23,10 +23,8 @@ In the case included here, the thresholds are arbitrary numbers for the count of
  
 Fiddler will be used to modify the response from the service to indicate a failure, so it triggers the failover to secondary.
 
->NOTE
->Invalid static route can also be used to simulate failure. 
->
->
+> NOTE:
+> An invalid static route can also be used to simulate failure. 
 
 2. Store your account credentials in enviroment variables securely on the machine running the sample. Enter the following command to create and store your **storageConnectionString** in an environment variable.
 The account must have RA-GRS enabled, or the sample fails. 
@@ -47,13 +45,15 @@ setx storageConnectionString "<YourStorageConnectionString>"
 5. The application pauses at 200 count intervals.
 
 6. Go to Fiddler and select Rules > Customize Rules. Look for the OnBeforeResponse function and insert this code. (An example of the OnBeforeResponse method is included in the project in the Fiddler_script.txt file.)
-```
-	if ((oSession.hostname == "YOURSTORAGEACCOUNTNAME.blob.core.windows.net") 
-	&& (oSession.PathAndQuery.Contains("sampleFile"))) {
-	   oSession.responseCode = 503;  
-        }
-```
-	Change YOURSTORAGEACCOUNTNAME to your storage account name, and uncomment out this code. Save your changes to the script. 
+
+    ```
+    if ((oSession.hostname == "YOURSTORAGEACCOUNTNAME.blob.core.windows.net")
+      && (oSession.PathAndQuery.Contains("sampleFile"))) {
+        oSession.responseCode = 503;  
+    }
+    ```
+
+    Change YOURSTORAGEACCOUNTNAME to your storage account name, and uncomment out this code. Save your changes to the script. 
 
 7. Return to your application and press any key to continue running it. In the output, you will see the errors against primary that come from the intercept in Fiddler, and the switch to secondary storage. After the number of reads exceeds the threshold, you will see it switch back to primary. It does this repeatedly. 
 
@@ -61,8 +61,8 @@ setx storageConnectionString "<YourStorageConnectionString>"
 
 If you run the application repeatedly, be sure the script change is commented out before you start the application. 
 
-
 ## More information
+
 - [About Azure storage accounts](https://docs.microsoft.com/azure/storage/storage-create-storage-account)
 - [Designing HA Apps with RA-GRS storage](https://docs.microsoft.com/azure/storage/common/storage-designing-ha-apps-with-ragrs)
 - [Azure Storage Replication](https://docs.microsoft.com/azure/storage/storage-redundancy)
