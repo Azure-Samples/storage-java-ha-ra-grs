@@ -39,7 +39,7 @@ import java.util.Random;
 
 public class App {
 
-    public static final String storageConnectionString = System.getenv("DefaultEndpointsProtocol=https;AccountName=409450forlh;AccountKey=KQr9H+LkizGOH/HaVhIIiXzce1gxdDHg1oOshDd/Az8kVZALZ+jjx1C8n4xzQzz//688TYnTWJZQ05LuqxiPhA==;EndpointSuffix=core.windows.net");
+    public static final String storageConnectionString = System.getenv("storageconnectionstring");
 
     public static void main(String[] args) {
         File sourceFile = null, downloadedFile = null;
