@@ -1,4 +1,4 @@
-// MIT License
+package AzureApp;// MIT License
 // Copyright (c) Microsoft Corporation. All rights reserved.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,41 +20,47 @@
 // SOFTWARE
 
 
-import com.microsoft.azure.storage.*;
-import com.microsoft.azure.storage.blob.*;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.DownloadRetryOptions;
+import com.azure.storage.blob.options.BlobDownloadToFileOptions;
+import com.azure.storage.blob.specialized.BlockBlobClient;
 
-import java.io.*;
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
-import java.util.Date;
+import java.io.BufferedInputStream;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Writer;
 import java.util.Random;
 
 public class App {
 
     public static final String storageConnectionString = System.getenv("storageconnectionstring");
 
-    public static void main( String[] args )
-    {
+    public static void main(String[] args) {
         File sourceFile = null, downloadedFile = null;
         System.out.println("Azure Blob storage quick start sample");
 
-        CloudStorageAccount storageAccount;
-        CloudBlobClient blobClient = null;
-        CloudBlobContainer container=null;
+        BlobContainerClient blobContainerClient = null;
+
         Random rand = new Random();
 
-        final int deltaBackOff = 10;
         final int maxAttempts = 10;
 
         try {
             // Parse the connection string and create a blob client to interact with Blob storage
-            storageAccount = CloudStorageAccount.parse(storageConnectionString);
-            blobClient = storageAccount.createCloudBlobClient();
-            container = blobClient.getContainerReference("quickstartcontainer" + rand.nextInt());
-
+            BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+                    .connectionString(storageConnectionString).buildClient();
             // Create the container if it does not exist with public access.
-            System.out.println("Creating container: " + container.getName());
-            container.createIfNotExists();
+            blobContainerClient = blobServiceClient.getBlobContainerClient("quickstartcontainer" + rand.nextInt());
+            if (!blobContainerClient.exists()) {
+                blobContainerClient.create();
+            }
+            System.out.println("Creating container: " + blobContainerClient.getBlobContainerName());
 
             //Creating a sample file
             sourceFile = File.createTempFile("sampleFile", ".txt");
@@ -64,50 +70,42 @@ public class App {
             output.close();
 
             //Getting a blob reference
-            CloudBlockBlob blob = container.getBlockBlobReference(sourceFile.getName());
+            BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(sourceFile.getName()).getBlockBlobClient();
 
             //Creating blob and uploading file to it
             System.out.println("Uploading the sample file ");
-            blob.uploadFromFile(sourceFile.getAbsolutePath());
-
-            BlobRequestOptions myReqOptions = new BlobRequestOptions();
-            myReqOptions.setRetryPolicyFactory(new RetryLinearRetry(deltaBackOff,maxAttempts));
-            myReqOptions.setLocationMode(LocationMode.SECONDARY_ONLY);
-            blobClient.setDefaultRequestOptions(myReqOptions);
+            blockBlobClient.upload(new FileInputStream(sourceFile), sourceFile.length());
 
             int counter = 0;
-            while(counter < 60)
-            {
+            while (counter < 60) {
                 counter++;
 
                 System.out.println("Attempt " + counter + " to see if the blob has replicated to secondary yet.");
 
-                if(blob.exists())
-                {
+                if (blockBlobClient.exists()) {
                     break;
                 }
 
                 Thread.sleep(1000);
             }
 
-            blobClient.getDefaultRequestOptions().setLocationMode(LocationMode.PRIMARY_THEN_SECONDARY);
-            OperationContext opContext = new OperationContext();
-
-            for (int i = 0; i <1000; i++)
-            {
-                if(i == 200 || i == 400 || i == 600 || i == 800)
-                {
+            for (int i = 0; i < 1000; i++) {
+                if (i == 200 || i == 400 || i == 600 || i == 800) {
                     System.out.println("Press enter to continue.");
                     System.in.read();
                 }
-                try{
+                try {
 
                     // Download blob. In most cases, you would have to retrieve the reference
                     // to cloudBlockBlob here. However, we created that reference earlier, and
                     // haven't changed the blob we're interested in, so we can reuse it.
                     // Here we are creating a new file to download to. Alternatively you can also pass in the path as a string into downloadToFile method: blob.downloadToFile("/path/to/new/file").
                     downloadedFile = new File(sourceFile.getParentFile(), "downloadedFile.txt");
-                    blob.downloadToFile(downloadedFile.getAbsolutePath(),null,blobClient.getDefaultRequestOptions(),opContext);
+                    BlobDownloadToFileOptions blobDownloadToFileOptions
+                            = new BlobDownloadToFileOptions(downloadedFile.getAbsolutePath())
+                            .setDownloadRetryOptions(new DownloadRetryOptions().setMaxRetryRequests(maxAttempts));
+                    blockBlobClient.downloadToFileWithResponse(
+                            blobDownloadToFileOptions, null, null).getValue();
                     FileInputStream fis = new FileInputStream(downloadedFile);
                     InputStream input = new BufferedInputStream((fis));
                     byte[] bytesArray = new byte[(int) downloadedFile.length()];
@@ -115,63 +113,38 @@ public class App {
                     input.close();
                     fis.close();
 
-                    System.out.print("The contents of the downloaded file are: " );
+                    System.out.print("The contents of the downloaded file are: ");
                     System.out.write(bytesArray);
                     System.out.println();
-                    System.out.println("The blob has been downloaded from: " + opContext.getLastResult().getTargetLocation());
-                }
-                catch (Exception ex)
-                {
+                    System.out.println("The blob has been downloaded from: " + blockBlobClient.getBlobUrl());
+                } catch (Exception ex) {
                     System.out.println(ex.toString());
                 }
             }
-        }
-        catch (StorageException ex)
-        {
-            System.out.println(String.format("Error returned from the service. Http code: %d and error code: %s", ex.getHttpStatusCode(), ex.getErrorCode()));
-        }
-        catch (InvalidKeyException ex)
-        {
-            System.out.println("Make sure your storageconnectionstring environment variable is set correctly and is accurate.");
-        }
-        catch (URISyntaxException ex)
-        {
-            System.out.println("Please make sure all URIs in your storageconnectionstring envrionement variable are valid.");
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             System.out.println(ex.getMessage());
-        }
-        finally
-        {
+        } finally {
             System.out.println("The program has completed successfully.");
             System.out.println("Press the 'Enter' key while in the console to delete the sample files, example container, and exit the application.");
 
             //Pausing for input
             try {
                 System.in.read();
-            }
-            catch (IOException ex)
-            {
+            } catch (IOException ex) {
                 System.out.println(ex.getMessage());
             }
 
             System.out.println("Deleting the container");
-            
-            try {
-                if(container != null)
-                    container.deleteIfExists();
-            }
-            catch (StorageException ex) {
-                System.out.println(String.format("Service error. Http code: %d and error code: %s", ex.getHttpStatusCode(), ex.getErrorCode()));
+            if(blobContainerClient.exists()){
+                blobContainerClient.delete();
             }
 
             System.out.println("Deleting the source and downloaded files");
 
-            if(downloadedFile != null)
+            if (downloadedFile != null)
                 downloadedFile.deleteOnExit();
 
-            if(sourceFile != null)
+            if (sourceFile != null)
                 sourceFile.deleteOnExit();
         }
     }
